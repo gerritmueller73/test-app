@@ -14,7 +14,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 from .database import init_db, get_session
-from .models import User, Meal, ProgressEntry
+from .models import User, Meal, ProgressEntry, GoalMilestone
 from .services import get_daily_summary, get_recommendation
 from .schemas import (
     UserCreate,
@@ -24,6 +24,8 @@ from .schemas import (
     MealRead,
     ProgressEntryCreate,
     ProgressEntryRead,
+    GoalMilestoneCreate,
+    GoalMilestoneRead,
 )
 from .auth import (
     get_password_hash,
@@ -145,6 +147,43 @@ def list_progress_entries(
         raise HTTPException(status_code=403, detail="Not authorized")
 
     statement = select(ProgressEntry).where(ProgressEntry.user_id == user_id).order_by(ProgressEntry.date)
+    return session.exec(statement).all()
+
+
+# ---------------------- Goal Milestones ----------------------
+
+
+@app.post("/users/{user_id}/goals", response_model=GoalMilestoneRead, status_code=status.HTTP_201_CREATED)
+def add_goal_milestone(
+    user_id: int,
+    goal_in: GoalMilestoneCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to add goal for this user")
+
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    milestone = GoalMilestone(user_id=user_id, **goal_in.dict())
+    session.add(milestone)
+    session.commit()
+    session.refresh(milestone)
+    return milestone
+
+
+@app.get("/users/{user_id}/goals", response_model=List[GoalMilestoneRead])
+def list_goal_milestones(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    statement = select(GoalMilestone).where(GoalMilestone.user_id == user_id).order_by(GoalMilestone.target_date)
     return session.exec(statement).all()
 
 

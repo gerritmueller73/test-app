@@ -75,3 +75,25 @@ class ProgressEntryRead(ProgressEntryBase):
 
     class Config:
         orm_mode = True
+
+
+# Goal milestones
+
+
+class GoalMilestoneBase(BaseModel):
+    description: str
+    target_date: date
+
+
+class GoalMilestoneCreate(GoalMilestoneBase):
+    pass
+
+
+class GoalMilestoneRead(GoalMilestoneBase):
+    id: int
+    user_id: int
+    is_completed: bool
+    completed_date: Optional[date]
+
+    class Config:
+        orm_mode = True

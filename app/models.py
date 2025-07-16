@@ -37,6 +37,7 @@ class User(SQLModel, table=True):
     # Relationships
     meals: List[Meal] = Relationship(back_populates="user")
     progress_entries: List["ProgressEntry"] = Relationship(back_populates="user")
+    milestones: List["GoalMilestone"] = Relationship(back_populates="user")
 
 
 # Progress tracking (weight, measurements)
@@ -59,3 +60,20 @@ class ProgressEntry(SQLModel, table=True):
 
     # Relationship
     user: Optional[User] = Relationship(back_populates="progress_entries")
+
+
+# Goal milestones
+
+
+class GoalMilestone(SQLModel, table=True):
+    """Defines a goal milestone that a user wants to achieve by a target date."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+
+    description: str
+    target_date: date
+    is_completed: bool = False
+    completed_date: Optional[date] = None
+
+    user: Optional[User] = Relationship(back_populates="milestones")

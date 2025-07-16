@@ -36,3 +36,26 @@ class User(SQLModel, table=True):
 
     # Relationships
     meals: List[Meal] = Relationship(back_populates="user")
+    progress_entries: List["ProgressEntry"] = Relationship(back_populates="user")
+
+
+# Progress tracking (weight, measurements)
+
+
+class ProgressEntry(SQLModel, table=True):
+    """Stores weight and body measurement progress for the user."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+
+    # Metrics
+    date: date
+    weight_kg: float = Field(gt=0)
+    waist_cm: Optional[float] = Field(default=None, gt=0)
+    chest_cm: Optional[float] = Field(default=None, gt=0)
+    hips_cm: Optional[float] = Field(default=None, gt=0)
+    body_fat_pct: Optional[float] = Field(default=None, ge=0, le=100)
+    note: Optional[str] = None
+
+    # Relationship
+    user: Optional[User] = Relationship(back_populates="progress_entries")

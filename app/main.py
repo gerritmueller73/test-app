@@ -14,7 +14,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 
 from .database import init_db, get_session
-from .models import User, Meal
+from .models import User, Meal, ProgressEntry
 from .services import get_daily_summary, get_recommendation
 from .schemas import (
     UserCreate,
@@ -22,6 +22,8 @@ from .schemas import (
     Token,
     MealCreate,
     MealRead,
+    ProgressEntryCreate,
+    ProgressEntryRead,
 )
 from .auth import (
     get_password_hash,
@@ -106,6 +108,44 @@ def log_meal(
     session.commit()
     session.refresh(meal)
     return meal
+
+
+# ---------------------- Progress Tracking ----------------------
+
+
+@app.post("/users/{user_id}/progress", response_model=ProgressEntryRead, status_code=status.HTTP_201_CREATED)
+def add_progress_entry(
+    user_id: int,
+    entry_in: ProgressEntryCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to add progress for this user")
+
+    # Validate user exists
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    entry = ProgressEntry(user_id=user_id, **entry_in.dict())
+    session.add(entry)
+    session.commit()
+    session.refresh(entry)
+    return entry
+
+
+@app.get("/users/{user_id}/progress", response_model=List[ProgressEntryRead])
+def list_progress_entries(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    statement = select(ProgressEntry).where(ProgressEntry.user_id == user_id).order_by(ProgressEntry.date)
+    return session.exec(statement).all()
 
 
 @app.get("/users/{user_id}/summary")

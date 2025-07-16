@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nutrition Coaching App</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+      }
+      form {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+      }
+      input {
+        margin: 0.25rem 0;
+        width: 100%;
+        padding: 0.4rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+      }
+      #status {
+        color: green;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Nutrition Coaching App</h1>
+
+    <h2>Register</h2>
+    <form id="register-form">
+      <input name="email" placeholder="Email" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <input name="name" placeholder="Name" required />
+      <input name="age" type="number" placeholder="Age" required />
+      <input name="gender" placeholder="Gender (male/female)" required />
+      <input name="height_cm" type="number" step="0.1" placeholder="Height cm" required />
+      <input name="weight_kg" type="number" step="0.1" placeholder="Weight kg" required />
+      <input name="activity_level" placeholder="Activity level" value="moderate" />
+      <input name="goal" placeholder="Goal (maintain/lose/gain)" value="maintain" />
+      <button type="submit">Register</button>
+    </form>
+
+    <h2>Login</h2>
+    <form id="login-form">
+      <input name="username" placeholder="Email" required />
+      <input name="password" type="password" placeholder="Password" required />
+      <button type="submit">Login</button>
+    </form>
+
+    <h2>Log Meal</h2>
+    <form id="meal-form">
+      <input name="user_id" type="number" placeholder="User ID" required />
+      <input name="name" placeholder="Meal name" required />
+      <input name="calories" type="number" placeholder="Calories" required />
+      <input name="protein_g" type="number" placeholder="Protein g" required />
+      <input name="carbs_g" type="number" placeholder="Carbs g" required />
+      <input name="fat_g" type="number" placeholder="Fat g" required />
+      <input name="date" type="date" />
+      <button type="submit">Add Meal</button>
+    </form>
+
+    <p id="status"></p>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      let token = null;
+
+      function setStatus(msg, isError = false) {
+        statusEl.style.color = isError ? "red" : "green";
+        statusEl.textContent = msg;
+      }
+
+      document.getElementById("register-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        try {
+          const res = await fetch("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const out = await res.json();
+          if (!res.ok) throw new Error(out.detail || "Registration failed");
+          setStatus("Registered! User ID: " + out.id);
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      document.getElementById("login-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const params = new URLSearchParams(data);
+        try {
+          const res = await fetch("/auth/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params,
+          });
+          const out = await res.json();
+          if (!res.ok) throw new Error(out.detail || "Login failed");
+          token = out.access_token;
+          setStatus("Logged in! Token acquired.");
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+
+      document.getElementById("meal-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (!token) return setStatus("Please login first", true);
+        const data = Object.fromEntries(new FormData(e.target).entries());
+        const userId = data.user_id;
+        delete data.user_id;
+        if (!data.date) data.date = new Date().toISOString().slice(0, 10);
+        try {
+          const res = await fetch(`/users/${userId}/meals`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(data),
+          });
+          const out = await res.json();
+          if (!res.ok) throw new Error(out.detail || "Meal log failed");
+          setStatus("Meal logged ID: " + out.id);
+        } catch (err) {
+          setStatus(err.message, true);
+        }
+      });
+    </script>
+  </body>
+</html>

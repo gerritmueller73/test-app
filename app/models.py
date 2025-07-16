@@ -24,6 +24,7 @@ class User(SQLModel, table=True):
     """User profile with basic anthropometrics & goals."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    email: str
     name: str
     age: int
     gender: str  # "male" | "female"
@@ -31,6 +32,7 @@ class User(SQLModel, table=True):
     weight_kg: float
     activity_level: str  # "sedentary", "light", "moderate", "active", "very_active"
     goal: str  # "maintain", "lose", "gain"
+    hashed_password: str
 
     # Relationships
     meals: List[Meal] = Relationship(back_populates="user")
